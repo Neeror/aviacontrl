@@ -69,6 +69,10 @@ const container = document.getElementById("mapContainer");
 let isActive = false;
 const closeBtnMap = document.getElementById("closeBtn");
 
+let touches = [];
+let lastDist = null;
+
+
 container.addEventListener("click", () => {
     if (isActive) return;
   
@@ -146,3 +150,70 @@ container.addEventListener("wheel", (e) => {
 
   update();
 });
+container.addEventListener("pointerdown", (e) => {
+    if (!isActive) return;
+  
+    touches.push(e);
+  
+    if (touches.length === 1) {
+      isDown = true;
+  
+      startX = e.clientX - posX;
+      startY = e.clientY - posY;
+    }
+  
+    if (touches.length === 2) {
+      isDown = false;
+      lastDist = getDist(touches[0], touches[1]);
+    }
+  });
+  
+  container.addEventListener("pointermove", (e) => {
+    if (!isActive) return;
+  
+    
+    touches = touches.map(t => (t.pointerId === e.pointerId ? e : t));
+  
+    if (touches.length === 2) {
+    
+      const dist = getDist(touches[0], touches[1]);
+  
+      if (lastDist) {
+        const diff = dist - lastDist;
+  
+        scale += diff * 0.01;
+        scale = Math.max(minScale, Math.min(maxScale, scale));
+  
+        update();
+      }
+  
+      lastDist = dist;
+      return;
+    }
+  
+    if (!isDown) return;
+  
+    posX = e.clientX - startX;
+    posY = e.clientY - startY;
+  
+    update();
+  });
+  
+  container.addEventListener("pointerup", (e) => {
+    touches = touches.filter(t => t.pointerId !== e.pointerId);
+  
+    if (touches.length < 2) lastDist = null;
+    if (touches.length === 0) isDown = false;
+  });
+  
+  container.addEventListener("pointercancel", () => {
+    touches = [];
+    isDown = false;
+    lastDist = null;
+  });
+ 
+  function getDist(a, b) {
+    const dx = a.clientX - b.clientX;
+    const dy = a.clientY - b.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
